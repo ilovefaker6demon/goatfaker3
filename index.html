@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Marco의 사이트입니다</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Titillium+Web:wght@400;600;700&display=swap" rel="stylesheet"> <!--google font-->
+    <link rel="stylesheet" type="text/css" href="Content/style/common.css" /> <!--외부 스타일 시트(css 파일별도,링크로 참조)-->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.8.2/css/all.min.css" /> <!--Font Awesome-->
+    <!--Home 글자 타이핑 효과 적용--> <!--jQuery-->
+    <script type="text/javascript" src="http://code.jquery.com/jquery-latest.js"></script>
+    <script src="https://unpkg.com/typewriter-effect@2.3.1/dist/core.js"></script>
+    
+    <script>
+    /*dddddddddddddddddddddddddddddddddddddddd*/
+    ;(function(window, document) {
+  "use strict";
+  var pluginName = 'particleground';
+
+  // http://youmightnotneedjquery.com/#deep_extend
+  function extend(out) {
+    out = out || {};
+    for (var i = 1; i < arguments.length; i++) {
+      var obj = arguments[i];
+      if (!obj) continue;
+      for (var key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          if (typeof obj[key] === 'object')
+            deepExtend(out[key], obj[key]);
+          else
+            out[key] = obj[key];
+        }
+      }
+    }
+    return out;
+  };
+
+  var $ = window.jQuery;
+
+  function Plugin(element, options) {
+    var canvasSupport = !!document.createElement('canvas').getContext;
+    var canvas;
+    var ctx;
+    var particles = [];
+    var raf;
+    var mouseX = 0;
+    var mouseY = 0;
+    var winW;
+    var winH;
+    var desktop = !navigator.userAgent.match(/(iPhone|iPod|iPad|Android|BlackBerry|BB10|mobi|tablet|opera mini|nexus 7)/i);
+    var orientationSupport = !!window.DeviceOrientationEvent;
+    var tiltX = 0;
+    var pointerX;
+    var pointerY;
+    var tiltY = 0;
+    var paused = false;
+
+    options = extend({}, window[pluginName].defaults, options);
+
+    /**
+     * Init
+     */
+    function init() {
+      if (!canvasSupport) { return; }
+
+      //Create canvas
+      canvas = document.createElement('canvas');
+      canvas.className = 'pg-canvas';
+      canvas.style.display = 'block';
+      element.insertBefore(canvas, element.firstChild);
+      ctx = canvas.getContext('2d');
+      styleCanvas();
+
+      // Create particles
+      var numParticles = Math.round((canvas.width * canvas.height) / options.density);
+      for (var i = 0; i < numParticles; i++) {
+        var p = new Particle();
+        p.setStackPos(i);
+        particles.push(p);
+      };
+
+      window.addEventListener('resize', function() {
+        resizeHandler();
+      }, false);
+
+      document.addEventListener('mousemove', function(e) {
+        mouseX = e.pageX;
+        mouseY = e.pageY;
+      }, false);
+
+      if (orientationSupport && !desktop) {
+        window.addEventListener('deviceorientation', function () {
+          // Contrain tilt range to [-30,30]
+          tiltY = Math.min(Math.max(-event.beta, -30), 30);
+          tiltX = Math.min(Math.max(-event.gamma, -30), 30);
+        }, true);
+      }
+
+      draw();
+      hook('onInit');
+    }
+
+    /**
+     * Style the canvas
+     */
+    function styleCanvas() {
+      canvas.width = element.offsetWidth;
+      canvas.height = element.offsetHeight;
+      ctx.fillStyle = options.dotColor;
+      ctx.strokeStyle = options.lineColor;
+      ctx.lineWidth = options.lineWidth;
+    }
+
+    /**
+     * Draw particles
+     */
+    function draw() {
+      if (!canvasSupport) { return; }
+
+      winW = window.innerWidth;
+      winH = window.innerHeight;
+
+      // Wipe canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Update particle positions
+      for (var i = 0; i < particles.length; i++) {
+        particles[i].updatePosition();
+      };
+      // Draw particles
+      for (var i = 0; i < particles.length; i++) {
+        particles[i].draw();
+      };
+
+      // Call this function next time screen is redrawn
+      if (!paused) {
+        raf = requestAnimationFrame(draw);
+      }
+    }
+
+    /**
+     * Add/remove particles.
+     */
+    function resizeHandler() {
+      // Resize the canvas
+      styleCanvas();
+
+      var elWidth = element.offsetWidth;
+      var elHeight = element.offsetHeight;
+
+      // Remove particles that are outside the canvas
+      for (var i = particles.length - 1; i >= 0; i--) {
+        if (particles[i].position.x > elWidth || particles[i].position.y > elHeight) {
+          particles.splice(i, 1);
+        }
+      };
+
+      // Adjust particle density
+      var numParticles = Math.round((canvas.width * canvas.height) / options.density);
+      if (numParticles > particles.length) {
+        while (numParticles > particles.length) {
+          var p = new Particle();
+          particles.push(p);
+        }
+      } else if (numParticles < particles.length) {
+        particles.splice(numParticles);
+      }
+
+      // Re-index particles
+      for (i = particles.length - 1; i >= 0; i--) {
+        particles[i].setStackPos(i);
+      };
+    }
+
+    /**
+     * Pause particle system
+     */
+    function pause() {
+      paused = true;
+    }
+
+    /**
+     * Start particle system
+     */
+    function start() {
+      paused = false;
+      draw();
+    }
+
+    /**
+     * Particle
+     */
+    function Particle() {
+      this.stackPos;
+      this.active = true;
+      this.layer = Math.ceil(Math.random() * 3);
+      this.parallaxOffsetX = 0;
+      this.parallaxOffsetY = 0;
+      // Initial particle position
+      this.position = {
+        x: Math.ceil(Math.random() * canvas.width),
+        y: Math.ceil(Math.random() * canvas.height)
+      }
+      // Random particle speed, within min and max values
+      this.speed = {}
+      switch (options.directionX) {
+        case 'left':
+          this.speed.x = +(-options.maxSpeedX + (Math.random() * options.maxSpeedX) - options.minSpeedX).toFixed(2);
+          break;
+        case 'right':
+          this.speed.x = +((Math.random() * options.maxSpeedX) + options.minSpeedX).toFixed(2);
+          break;
+        default:
+          this.speed.x = +((-options.maxSpeedX / 2) + (Math.random() * options.maxSpeedX)).toFixed(2);
+          this.speed.x += this.speed.x > 0 ? options.minSpeedX : -options.minSpeedX;
+          break;
+      }
+      switch (options.directionY) {
+        case 'up':
+          this.speed.y = +(-options.maxSpeedY + (Math.random() * options.maxSpeedY) - options.minSpeedY).toFixed(2);
+          break;
+        case 'down':
+          this.speed.y = +((Math.random() * options.maxSpeedY) + options.minSpeedY).toFixed(2);
+          break;
+        default:
+          this.speed.y = +((-options.maxSpeedY / 2) + (Math.random() * options.maxSpeedY)).toFixed(2);
+          this.speed.x += this.speed.y > 0 ? options.minSpeedY : -options.minSpeedY;
+          break;
+      }
+    }
+
+    /**
+     * Draw particle
+     */
+    Particle.prototype.draw = function() {
+      // Draw circle
+      ctx.beginPath();
+      ctx.arc(this.position.x + this.parallaxOffsetX, this.position.y + this.parallaxOffsetY, options.particleRadius / 2, 0, Math.PI * 2, true);
+      ctx.closePath();
+      ctx.fill();
+
+      // Draw lines
+      ctx.beginPath();
+      // Iterate over all particles which are higher in the stack than this one
+      for (var i = particles.length - 1; i > this.stackPos; i--) {
+        var p2 = particles[i];
+
+        // Pythagorus theorum to get distance between two points
+        var a = this.position.x - p2.position.x
+        var b = this.position.y - p2.position.y
+        var dist = Math.sqrt((a * a) + (b * b)).toFixed(2);
+
+        // If the two particles are in proximity, join them
+        if (dist < options.proximity) {
+          ctx.moveTo(this.position.x + this.parallaxOffsetX, this.position.y + this.parallaxOffsetY);
+          if (options.curvedLines) {
+            ctx.quadraticCurveTo(Math.max(p2.position.x, p2.position.x), Math.min(p2.position.y, p2.position.y), p2.position.x + p2.parallaxOffsetX, p2.position.y + p2.parallaxOffsetY);
+          } else {
+            ctx.lineTo(p2.position.x + p2.parallaxOffsetX, p2.position.y + p2.parallaxOffsetY);
+          }
+        }
+      }
+      ctx.stroke();
+      ctx.closePath();
+    }
+
+    /**
+     * update particle position
+     */
+    Particle.prototype.updatePosition = function() {
+      if (options.parallax) {
+        if (orientationSupport && !desktop) {
+          // Map tiltX range [-30,30] to range [0,winW]
+          var ratioX = (winW - 0) / (30 - -30);
+          pointerX = (tiltX - -30) * ratioX + 0;
+          // Map tiltY range [-30,30] to range [0,winH]
+          var ratioY = (winH - 0) / (30 - -30);
+          pointerY = (tiltY - -30) * ratioY + 0;
+        } else {
+          pointerX = mouseX;
+          pointerY = mouseY;
+        }
+        // Calculate parallax offsets
+        this.parallaxTargX = (pointerX - (winW / 2)) / (options.parallaxMultiplier * this.layer);
+        this.parallaxOffsetX += (this.parallaxTargX - this.parallaxOffsetX) / 10; // Easing equation
+        this.parallaxTargY = (pointerY - (winH / 2)) / (options.parallaxMultiplier * this.layer);
+        this.parallaxOffsetY += (this.parallaxTargY - this.parallaxOffsetY) / 10; // Easing equation
+      }
+
+      var elWidth = element.offsetWidth;
+      var elHeight = element.offsetHeight;
+
+      switch (options.directionX) {
+        case 'left':
+          if (this.position.x + this.speed.x + this.parallaxOffsetX < 0) {
+            this.position.x = elWidth - this.parallaxOffsetX;
+          }
+          break;
+        case 'right':
+          if (this.position.x + this.speed.x + this.parallaxOffsetX > elWidth) {
+            this.position.x = 0 - this.parallaxOffsetX;
+          }
+          break;
+        default:
+          // If particle has reached edge of canvas, reverse its direction
+          if (this.position.x + this.speed.x + this.parallaxOffsetX > elWidth || this.position.x + this.speed.x + this.parallaxOffsetX < 0) {
+            this.speed.x = -this.speed.x;
+          }
+          break;
+      }
+
+      switch (options.directionY) {
+        case 'up':
+          if (this.position.y + this.speed.y + this.parallaxOffsetY < 0) {
+            this.position.y = elHeight - this.parallaxOffsetY;
+          }
+          break;
+        case 'down':
+          if (this.position.y + this.speed.y + this.parallaxOffsetY > elHeight) {
+            this.position.y = 0 - this.parallaxOffsetY;
+          }
+          break;
+        default:
+          // If particle has reached edge of canvas, reverse its direction
+          if (this.position.y + this.speed.y + this.parallaxOffsetY > elHeight || this.position.y + this.speed.y + this.parallaxOffsetY < 0) {
+            this.speed.y = -this.speed.y;
+          }
+          break;
+      }
+
+      // Move particle
+      this.position.x += this.speed.x;
+      this.position.y += this.speed.y;
+    }
+
+    /**
+     * Setter: particle stacking position
+     */
+    Particle.prototype.setStackPos = function(i) {
+      this.stackPos = i;
+    }
+
+    function option (key, val) {
+      if (val) {
+        options[key] = val;
+      } else {
+        return options[key];
+      }
+    }
+
+    function destroy() {
+      console.log('destroy');
+      canvas.parentNode.removeChild(canvas);
+      hook('onDestroy');
+      if ($) {
+        $(element).removeData('plugin_' + pluginName);
+      }
+    }
+
+    function hook(hookName) {
+      if (options[hookName] !== undefined) {
+        options[hookName].call(element);
+      }
+    }
+
+    init();
+
+    return {
+      option: option,
+      destroy: destroy,
+      start: start,
+      pause: pause
+    };
+  }
+
+  window[pluginName] = function(elem, options) {
+    return new Plugin(elem, options);
+  };
+
+  window[pluginName].defaults = {
+    minSpeedX: 0.1,
+    maxSpeedX: 0.7,
+    minSpeedY: 0.1,
+    maxSpeedY: 0.7,
+    directionX: 'center', // 'center', 'left' or 'right'. 'center' = dots bounce off edges
+    directionY: 'center', // 'center', 'up' or 'down'. 'center' = dots bounce off edges
+    density: 10000, // How many particles will be generated: one particle every n pixels
+    dotColor: '#666666',
+    lineColor: '#666666',
+    particleRadius: 7, // Dot size
+    lineWidth: 1,
+    curvedLines: false,
+    proximity: 100, // How close two dots need to be before they join
+    parallax: true,
+    parallaxMultiplier: 5, // The lower the number, the more extreme the parallax effect
+    onInit: function() {},
+    onDestroy: function() {}
+  };
+
+  // nothing wrong with hooking into jQuery if it's there...
+  if ($) {
+    $.fn[pluginName] = function(options) {
+      if (typeof arguments[0] === 'string') {
+        var methodName = arguments[0];
+        var args = Array.prototype.slice.call(arguments, 1);
+        var returnVal;
+        this.each(function() {
+          if ($.data(this, 'plugin_' + pluginName) && typeof $.data(this, 'plugin_' + pluginName)[methodName] === 'function') {
+            returnVal = $.data(this, 'plugin_' + pluginName)[methodName].apply(this, args);
+          }
+        });
+        if (returnVal !== undefined){
+          return returnVal;
+        } else {
+          return this;
+        }
+      } else if (typeof options === "object" || !options) {
+        return this.each(function() {
+          if (!$.data(this, 'plugin_' + pluginName)) {
+            $.data(this, 'plugin_' + pluginName, new Plugin(this, options));
+          }
+        });
+      }
+    };
+  }
+
+})(window, document);
+
+/**
+ * requestAnimationFrame polyfill by Erik Möller. fixes from Paul Irish and Tino Zijdel
+ * @see: http://paulirish.com/2011/requestanimationframe-for-smart-animating/
+ * @see: http://my.opera.com/emoller/blog/2011/12/20/requestanimationframe-for-smart-er-animating
+ * @license: MIT license
+ */
+(function() {
+    var lastTime = 0;
+    var vendors = ['ms', 'moz', 'webkit', 'o'];
+    for(var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
+      window.requestAnimationFrame = window[vendors[x]+'RequestAnimationFrame'];
+      window.cancelAnimationFrame = window[vendors[x]+'CancelAnimationFrame']
+                                 || window[vendors[x]+'CancelRequestAnimationFrame'];
+    }
+
+    if (!window.requestAnimationFrame)
+      window.requestAnimationFrame = function(callback, element) {
+        var currTime = new Date().getTime();
+        var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+        var id = window.setTimeout(function() { callback(currTime + timeToCall); },
+          timeToCall);
+        lastTime = currTime + timeToCall;
+        return id;
+      };
+
+    if (!window.cancelAnimationFrame)
+      window.cancelAnimationFrame = function(id) {
+        clearTimeout(id);
+      };
+}());
+
+    /*dddddddddddddddddddddddddddddddddddd*/
+    
+    </script>
+    
+    <script type="text/javascript">
+    $(document).ready(function(){ /* 소스가 불러와져서 문서가 준비가 되면 함수가 실행됨 */
+        var text = document.getElementById("homeTitle"); /* Home의 텍스트가 움직이는 함수 start */
+        var typewriter = new Typewriter(text, {
+                loop: true
+            });
+        typewriter.typeString('인터넷 프로그래밍')
+                .pauseFor(2500)
+                .deleteAll()
+                .typeString('최종 과제 발표')
+                .pauseFor(2500)
+                .deleteAll()
+                .typeString('저는 누구일까요?')
+                .pauseFor(2500)
+                .deleteChars(6)
+                .typeString('<strong>Marco 입니다!</strong>')
+                .pauseFor(2500)
+                .start();
+    }) 
+    /* Home의 텍스트가 움직이는 함수 end */
+        
+    $(window).scroll(function(){ /* 보유스킬 막대bar 효과 */
+        $('.skillValue li').each(
+            function(i){
+                var size = $(this).data("size");
+                var pos_obj = $(this).offset().top;
+                var window_pos = $(window).scrollTop() +
+                $(window).height();
+                
+                if(window_pos >pos_obj){
+                    $(this).addClass("bar_new_ani");
+                    $(this).css("width",size+"%");
+                }
+            }
+        );
+        
+    $('#particles').particleground({ /* github 움직이는 배경 */
+        dotColor: '#00FFCB',
+        lineColor: '#31C2A5'
+        });
+    $('.intro').css({
+    'margin-top': -($('.intro').height() / 2)
+        });
+    });
+    </script>
+
+
+    <style>
+
+    </style>
+</head>
+<body>
+    <!--메뉴영역-->
+    <header>
+        <div class="logo"><a href="#"><h2>Marco Lee</h2></a></div> <!--홈으로-->
+        <nav> <!--상단 네비게이션-->
+            <ul>
+                <li><a href="#home">Home</a></li> <!--같은 페이지로 이동(아이디 경로)-->
+                <li><a href="#about">About</a></li>
+                <li><a href="#portfolio">Portfolio</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+    
+    <!--구성(영역)-->
+    <section class="fullpage" id="home"> <!--class는 중복가능 id는 중복불가-->
+    <div id="particles">
+      <div id="intro">
+        <h2 id="homeTitle">이우민 입니다</h2>
+      </div>
+    </div>
+    </section>
+    <section class="fullpage" id="about">
+        <div class="profile">
+            <h2>기본정보</h2>
+            <div class="imgDiv">
+                <img src="Content/image/person.jpg" />
+            </div>
+            <div class="infoDiv">
+                <ul>
+                    <li class="nameTitle">이우민(20215287)</li> 
+                    <li><i class="fas fa-home"></i>거주지 : 익산시 신동</li> <!--Font Awesome-->
+                    <li><i class="fas fa-mobile-alt"></i>연락처 : 010-0000-0000</li>
+                    <li><i class="far fa-envelope"></i>이메일 : marcolee@naver.com</li>
+                    <li><i class="fas fa-blog"></i>블로그 : https://section.blog.naver.com/</li>
+                </ul>
+                <div>
+                    안녕하세요. 원광대학교 창의공과대학 정보통신공학과 재학생입니니다.<br>백엔드 개발, 네트워크, 임베디드, 로보틱스에 관심있습니다.
+                </div>
+            </div>
+        </div>
+        <div class="skill">
+            <h2>보유 SKILL</h2>
+            <ul class="skillName">
+                <li>HTMl</li>
+                <li>CSS</li>
+                <li>javascript</li>
+                <li>C</li>
+                <li>Python</li>
+                <li>JSP</li>
+                <li>영어</li>
+            </ul>
+            <ul class="skillValue">
+                <li data-size="85">HTMl</li>
+                <li data-size="100">CSS</li>
+                <li data-size="50">javascript</li>
+                <li data-size="70">C</li>
+                <li data-size="30">Python</li>
+                <li data-size="10">JSP</li>
+                <li data-size="60">영어</li>
+            </ul>
+        </div>
+    </section>
+    <section class="fullpage" id="portfolio">
+        <h2>PORTFOLIO</h2>
+        <div class="project">
+            <div class="imgDiv">
+                <a href="Content/pofol/team01_kiki.pdf" target="_blank"><img src="Content/image/capstone1.png" /></a>
+            </div>
+            <div class="content">
+                <h3>2025-1 캡스톤디자인</h3>
+                <div>HC-SR501 및 ESP-32를 활용한 움직임 감지센서 개발</div>
+                <div class="hashtag">
+                    <ul>
+                        <li># 아두이노</li>
+                        <li># Vercel KV</li>
+                        <li># 적외선 감지</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="project">
+            <div class="imgDiv">
+                <a href="Content/pofol/04_net0design.pdf" target="_blank"><img src="Content/image/netzero1.png" /></a>
+            </div>
+            <div class="content">
+                <h3>2025 Energy UP! 하계 오픈캠퍼스</h3>
+                <div>탄소중립 축제디자인 : Net-Zero 이벤트 가이드라인 제작</div>
+                <div class="hashtag">
+                    <ul>
+                        <li># 에너지 신산업</li>
+                        <li># 전기 안전</li>
+                        <li># 넷제로</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section class="fullpage" id="contact">
+        <div style="display: inline-block; width:50%; float: left; height: 100%;">
+        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3229.099692655986!2d126.95120491201631!3d35.96898807238099!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x357015527a316527%3A0x37f3a7800fd9ee31!2z7JuQ6rSR64yA7ZWZ6rWQ!5e0!3m2!1sko!2sgm!4v1764078986281!5m2!1sko!2sgm" 
+        style = "width:100%;" height=99% style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe> <!--구글 지도 '공유-지도퍼가기-HTML복사'-->
+        </div>
+        <form id="sendForm" action="/serverPath" method="post">
+        <!--1.form=사용자에게 정보 입력받는.2.내용이 서버경로에 의해 전달 3.표준입력방식(주소노출x)-->
+        <div class="contactForm" style="display: inline-block; float: left;
+           width: 50%; height: 100%">
+            <h2>문의하기</h2>
+            <div class="inputGroup">
+                <div><input type="text" id="textName" name="clientName" placeholder="성함을 입력해주세요."/></div>
+                <!--박스 안에 반투명글자-->
+                <div><input type="text" id="textTel" name="tel" placeholder="연락처를 입력해주세요. ('-' 제외 숫자만)"/></div>
+                <div><input type="text" id="textEmail" name="email" placeholder="이메일을 입력해주세요." /></div>
+                <div><textarea id="content" name="content" placeholder="문의 내용"></textarea></div>
+                <button class="btnSend">문의 메일 보내기</button>
+            </div>
+        </div>
+        </form>
+        <div style="clear: both;"></div>
+    </section>
+    
+    <!--푸터 영역-->
+    <footer>
+        <p>Copyright ⓒ 2025. Marco Lee. All rights reserved.</p>
+    </footer>
+    
+    
+    
+    
+    
+</body>
+</html>

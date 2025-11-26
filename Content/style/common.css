@@ -1,0 +1,87 @@
+html, body{width: 100%; height: 100%; margin: 0 auto; font-family: "Titillium Web", "Noto Sans KR", sans-serif;} /*google font*/
+
+header{height: 4rem; position: fixed; top: 0; width: 100%; background-color: #fff; box-shadow: 0px 1px 2px 0.2px #ddd;} 
+/* 상단바 고정(fixed), 배경 하얗게, 메뉴 하단부 그림자: x y 뿌옇게 퍼짐 */
+header h2{display: inline-block; color: #0010FF;}
+/* h태그의 dispaly 속성을 바꿔준다(자기 사이즈 만큼) */
+.logo{float: left; margin-left: 3rem; height: 100%;}
+
+/* 메뉴영역 start*/
+nav{display: inline-block; float: right; height: 100%;}
+nav ul{margin: 0 auto;}
+nav ul li{float: left; list-style: none; display: inline-block; padding: 20px 50px; cursor: pointer;}
+/* li 좌정렬, li 점 없앰, 사이즈 고정,상하 좌우 간격,마우스 커서에 포인터 */
+nav ul li a{font-size: 1.5em; font-weight: 600; color: #444444; text-decoration: none} /* 폰트 사이즈, 굵기, 컬러(picpick 사용),언더라인x */
+nav ul li a:hover{color: #0010FF;} /* 마우스 올렸을때 효과 */
+/* 메뉴영역 end*/
+ 
+.fullpage{width: 100%; min-height: 100%; padding-top: 4rem;} 
+/* 그냥 height 하면 이미지가 아래로 넘어가서 min-height사용, header 사이즈만큼(4rem) padding-top(간격)*/
+
+#home{background-color: #47484B; clear: both; text-align: center; height: 100%;} /* c6개와 동일, flaot:left에서(겹치므로) clear:both 사용 */
+#homeTitle{color:#fff; font-size: 4em;}
+
+#particles{
+    width: 100%; height: 100%;
+}
+#intro{
+    position: absolute; top:400px; left: 35%;
+}
+#about{background-color: #fff;}
+
+#about div{display: inline-block;}
+#about .profile{background: #fff; width: 40%; float: left; padding: 5%;} /* 40+5+5 = 50 */
+#about .infoDiv ul li{list-style: none;}
+#about .infoDiv ul li i{width: 30px; text-align: center;}
+#about .infoDiv .nameTitle{font-weight: bold; font-size: 1.2em;padding: 1em 0;}
+#about .imgDiv{text-align: center;}
+#about .imgDiv img{width: 50%;} /*about 안에있는 imgdiv 안에있는 이미지 크기 조절*/
+#about .skill{background: #fff; width: 40%; padding: 5%;} /* 40+5+5 = 50 */
+#about .skill ul{display: inline-block; list-style: none; word-break: keep-all} /*사이즈 고정(옆에 붙게),ul에 점 안보이게*/
+#about .skill ul li{margin: 10px 0 10px 0;} /*시계방향으로 픽셀간격*/
+#about .skillName{}
+#about .skillValue{width: 60%;}
+#about .skillValue li{background: lightskyblue; width: 0px;
+    transition-property: all;
+    transition-duration: 4s;
+    transition-timing-function: ease-in-out;
+}
+#about .skillValue li.bar_new_ani{width: 500px; background: deepskyblue;}
+#about .skillValue li.bar_new_ani_80{}
+
+#portfolio{background-color: #fff; border-top: 1px solid #ccc; text-align: center;} /*Ab와 Pof 사이 실선, 텍스트 가운데 정렬*/
+#portfolio .project{display: inline-block; margin-bottom: 5rem; padding: 0px 20px; max-width: 1350px;}
+#portfolio .project div{display: inline-block;}
+#portfolio .project .imgDiv{width: 50%; float: left;} /*프로젝트 내용 옆으로 오게*/
+#portfolio .project .imgDiv img{width: 100%;} /*div 사이즈에 맞게 이미지 크기 조정*/
+#portfolio .project .content{width: 50%; text-align: left;}/*텍스트 좌측 정렬*/
+#portfolio .project .content *{padding-left: 1em;}
+#portfolio .project .hashtag{display: block;}
+#portfolio .project .hashtag ul{padding: 0px;}
+#portfolio .project .hashtag ul li{float: left; margin-right: 20px; list-style: none; background-color: #00B0FB;
+    color: #fff; border-radius: 20px; padding: 0.3em 0.8em; font-size: 0.8em; font-weight: bold; cursor: default;}
+/*마우스 커서 올렸을때 I가 아니라 화살표로*/
+#portfolio .project .hashtag ul li:hover{background-color: #A5CEDF;} /*마우스 커서 올렸을때 색상변화*/
+
+
+#contact{background-color: #fff; height: 100%; border-top: 1px solid #ccc;}
+
+.contactForm{
+    text-align: center;
+}
+.contactForm #content{width: 100%; height: 350px; line-height: 1.25em; font-size: 1.25em; margin: 0.25em 0;
+    padding: 0.25em 0.25em;}
+.inputGroup{width: 80%; margin: 0 auto; text-align: center;}
+.inputGroup *{font-family: "Titillium Web", "Noto Sans KR", sans-serif;} /*  '*'inputGroup안에있는 모든 폰트설정*/
+.inputGroup input, .inputGroup textarea{width: 100%; line-height: 1.25em; font-size: 1.25em; margin: 0.25em 0;
+    padding: 0.25em 0.25em; border:3px solid #ccc;} /*border=테두*/
+.inputGroup input::placeholder, .inputGroup textarea::placeholder{color: #ccc; font-size: 0.75em;}
+.btnSend{background-color: #e91e63; border: 1px solid #e91e63; font-size: 1.25em; padding: 0.5em 1.75em; color: #fff;
+    border-radius: 0.25em;} /*버튼 모퉁이 살짝 둥글게*/
+.btnSend:hover{background-color: #d21858;}
+
+footer{text-align: center; font-size: 1.25em; background-color: #292929; color: #fff; padding: 0.25em 0;}
+
+
+
+
